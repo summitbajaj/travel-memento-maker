@@ -37,6 +37,189 @@ const MemoryDetail = () => {
     }
   }, [id, getMemory, navigate, location.search]);
   
+  const generateMemoryContent = async (mem: Memory) => {
+    try {
+      const openaiKey = localStorage.getItem('openai-api-key');
+      
+      // Generate narrative and highlights using OpenAI
+      const narrativeResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a creative travel writer who creates personalized narratives and highlights based on travel experiences.'
+            },
+            {
+              role: 'user',
+              content: `Create a travel narrative about a trip to ${mem.destination} for the dates ${format(new Date(mem.startDate), 'MMM d, yyyy')} to ${format(new Date(mem.endDate), 'MMM d, yyyy')}. Description: ${mem.description || 'No additional details provided.'}`
+            }
+          ],
+          max_tokens: 1000
+        })
+      });
+      
+      const narrativeData = await narrativeResponse.json();
+      const narrative = narrativeData.choices[0].message.content;
+      
+      // Generate highlights
+      const highlightsResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: 'Create a list of 5 highlights or memorable moments for this trip.'
+            },
+            {
+              role: 'user',
+              content: `Trip to ${mem.destination} for the dates ${format(new Date(mem.startDate), 'MMM d, yyyy')} to ${format(new Date(mem.endDate), 'MMM d, yyyy')}. Description: ${mem.description || 'No additional details provided.'}`
+            }
+          ],
+          max_tokens: 300
+        })
+      });
+      
+      const highlightsData = await highlightsResponse.json();
+      const highlightsText = highlightsData.choices[0].message.content;
+      // Parse bullet points or numbered lists into an array
+      const highlights = highlightsText
+        .split(/\n/)
+        .filter(line => line.trim().match(/^(\d+\.|\*|\-)\s+/))
+        .map(line => line.replace(/^(\d+\.|\*|\-)\s+/, '').trim());
+      
+      // Generate postcards (captions for existing photos)
+      const postcards = [];
+      for (let i = 0; i < Math.min(mem.photos.length, 3); i++) {
+        const captionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${openaiKey}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [
+              {
+                role: 'system',
+                content: 'Create a short, evocative caption for a travel photo postcard.'
+              },
+              {
+                role: 'user',
+                content: `Create a beautiful, poetic caption for a travel photo from ${mem.destination}.`
+              }
+            ],
+            max_tokens: 50
+          })
+        });
+        
+        const captionData = await captionResponse.json();
+        postcards.push({
+          id: `postcard-${i+1}`,
+          imageUrl: mem.photos[i].url,
+          caption: captionData.choices[0].message.content.replace(/"/g, '')
+        });
+      }
+      
+      // Generate soundtrack using Spotify
+      const spotifyClientId = localStorage.getItem('spotify-client-id');
+      const spotifyClientSecret = localStorage.getItem('spotify-client-secret');
+      
+      // Get Spotify access token
+      const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Basic ' + btoa(`${spotifyClientId}:${spotifyClientSecret}`)
+        },
+        body: 'grant_type=client_credentials'
+      });
+      
+      const tokenData = await tokenResponse.json();
+      const accessToken = tokenData.access_token;
+      
+      // Generate mood keywords for the trip using OpenAI
+      const moodResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: 'Generate 3 mood/genre keywords for a travel soundtrack.'
+            },
+            {
+              role: 'user',
+              content: `Generate 3 music genres or moods that would match a trip to ${mem.destination} for the dates ${format(new Date(mem.startDate), 'MMM d, yyyy')} to ${format(new Date(mem.endDate), 'MMM d, yyyy')}. Description: ${mem.description || 'No additional details provided.'}`
+            }
+          ],
+          max_tokens: 100
+        })
+      });
+      
+      const moodData = await moodResponse.json();
+      const moods = moodData.choices[0].message.content.split(/,|\n/).map(mood => mood.trim().replace(/^\d+\.\s*/, ''));
+      
+      // Search for tracks based on moods
+      let tracks = [];
+      for (const mood of moods) {
+        const searchResponse = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(mood)}&type=track&limit=4`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        });
+        
+        const searchData = await searchResponse.json();
+        tracks = [...tracks, ...searchData.tracks.items.map(item => ({
+          name: item.name,
+          artist: item.artists[0].name,
+          url: item.external_urls.spotify
+        }))];
+      }
+      
+      // Filter to get a diverse set of 10 tracks maximum
+      tracks = tracks.filter((track, index, self) => 
+        index === self.findIndex(t => t.name === track.name)
+      ).slice(0, 10);
+      
+      const generatedMemory = {
+        ...mem,
+        generationComplete: true,
+        postcards,
+        soundtrack: {
+          id: Date.now().toString(),
+          songs: tracks
+        },
+        narrative,
+        highlights
+      };
+      
+      updateMemory(mem.id, generatedMemory);
+      setMemory(generatedMemory);
+      setIsGenerating(false);
+      toast.success("Memory generation complete!");
+      
+    } catch (error) {
+      console.error('Error generating memory content:', error);
+      toast.error("Error generating memory content. Please check your API keys and try again.");
+      setIsGenerating(false);
+    }
+  };
+  
   const startGeneration = (mem: Memory) => {
     if (isGenerating) return;
     
@@ -55,64 +238,7 @@ const MemoryDetail = () => {
     
     toast.info("Generating your memory capsule. This may take a minute...");
     
-    simulateGeneration(mem);
-  };
-  
-  const simulateGeneration = (mem: Memory) => {
-    setTimeout(() => {
-      const generatedMemory = {
-        ...mem,
-        generationComplete: true,
-        postcards: [
-          { id: '1', imageUrl: mem.photos[0]?.url, caption: `Beautiful views in ${mem.destination}` },
-          { id: '2', imageUrl: mem.photos[1]?.url, caption: `Unforgettable moments in ${mem.destination}` },
-          { id: '3', imageUrl: mem.photos[2]?.url, caption: `The journey through ${mem.destination} was magnificent` },
-        ],
-        soundtrack: {
-          id: '1',
-          songs: [
-            { name: 'Wanderlust', artist: 'Travel Tunes' },
-            { name: 'Sunset Memories', artist: 'Ambient Journeys' },
-            { name: 'Road Less Traveled', artist: 'Voyager' },
-            { name: 'Mountain High', artist: 'The Explorers' },
-            { name: 'Ocean Waves', artist: 'Coastal Dreams' },
-            { name: 'City Lights', artist: 'Urban Adventures' },
-            { name: 'Train to Nowhere', artist: 'Nomad Soul' },
-            { name: 'Desert Wind', artist: 'The Travelers' },
-            { name: 'Foreign Land', artist: 'Border Crossing' },
-            { name: 'Coming Home', artist: 'Return Journey' },
-          ]
-        },
-        narrative: `During our trip to ${mem.destination}, we experienced the most incredible adventure. 
-        From the moment we arrived, the atmosphere was electric with possibility. 
-        The local culture enveloped us in its rich traditions and warm hospitality. 
-        We wandered through charming streets, discovering hidden gems around every corner.
-        
-        The cuisine was a revelation, each meal a celebration of flavors we had never encountered before. 
-        Mornings were spent exploring historic sites, while afternoons gave way to peaceful moments of reflection 
-        by stunning natural landmarks. The evenings transformed the landscape into a magical backdrop for unforgettable conversations.
-        
-        Weather patterns shifted unpredictably, but each meteorological surprise only added to the authenticity of our experience. 
-        We made friends with locals who shared stories that textbooks could never capture. 
-        Their insights gave us a deeper appreciation for the place we were temporarily calling home.
-        
-        As our journey came to a close, we found ourselves changed in subtle yet profound ways. 
-        The memories we collected will remain vivid long after the photos have faded. 
-        This trip wasn't just a departure from routine—it was a transformative experience that expanded our understanding of the world and ourselves.`,
-        highlights: [
-          "Exploring the historic district at sunrise",
-          "Tasting local delicacies at the night market",
-          "Meeting fellow travelers from across the globe",
-          "Witnessing breathtaking natural phenomena",
-          "Learning traditional crafts from local artisans"
-        ]
-      };
-      
-      updateMemory(mem.id, generatedMemory);
-      setMemory(generatedMemory);
-      setIsGenerating(false);
-      toast.success("Memory generation complete!");
-    }, 3000);
+    generateMemoryContent(mem);
   };
   
   if (!memory) {
@@ -227,6 +353,16 @@ const MemoryDetail = () => {
                         <li key={index} className="pl-2">
                           <div className="font-medium">{song.name}</div>
                           <div className="text-sm text-muted-foreground">{song.artist}</div>
+                          {song.url && (
+                            <a 
+                              href={song.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-xs text-blue-600 hover:underline"
+                            >
+                              Listen on Spotify
+                            </a>
+                          )}
                         </li>
                       ))}
                     </ol>
