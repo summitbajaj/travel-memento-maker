@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ChevronDown, Menu, X, Settings } from 'lucide-react';
+import { ChevronDown, Menu, X, Settings, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -26,8 +26,11 @@ const Header = () => {
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px] border-l">
               <nav className="flex flex-col gap-4 mt-8">
-                <Link to="/" onClick={() => setIsMenuOpen(false)}>
-                  <Button variant="ghost" className="justify-start h-12 text-lg w-full">Create Trip</Button>
+                <Link to="/create" onClick={() => setIsMenuOpen(false)}>
+                  <Button variant="ghost" className="justify-start h-12 text-lg w-full">
+                    <PlusCircle className="mr-2 h-5 w-5" />
+                    Create Memory
+                  </Button>
                 </Link>
                 <Link to="/" onClick={() => setIsMenuOpen(false)}>
                   <Button variant="ghost" className="justify-start h-12 text-lg w-full">My Gallery</Button>
@@ -46,7 +49,12 @@ const Header = () => {
           <nav className="flex items-center gap-8">
             <ul className="flex items-center gap-8">
               <li>
-                <Button variant="ghost" className="font-medium">Create Trip</Button>
+                <Link to="/create">
+                  <Button variant="ghost" className="font-medium">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Create Memory
+                  </Button>
+                </Link>
               </li>
               <li>
                 <Button variant="ghost" className="font-medium">My Gallery</Button>

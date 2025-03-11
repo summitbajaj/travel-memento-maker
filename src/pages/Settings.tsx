@@ -13,13 +13,15 @@ const Settings = () => {
   const navigate = useNavigate();
   const [openAIKey, setOpenAIKey] = useState(localStorage.getItem('openai-api-key') || '');
   const [claudeKey, setClaudeKey] = useState(localStorage.getItem('claude-api-key') || '');
-  const [spotifyKey, setSpotifyKey] = useState(localStorage.getItem('spotify-api-key') || '');
+  const [spotifyClientId, setSpotifyClientId] = useState(localStorage.getItem('spotify-client-id') || '');
+  const [spotifyClientSecret, setSpotifyClientSecret] = useState(localStorage.getItem('spotify-client-secret') || '');
   
   const handleSave = () => {
     // Store API keys in localStorage (for demo purposes)
     localStorage.setItem('openai-api-key', openAIKey);
     localStorage.setItem('claude-api-key', claudeKey);
-    localStorage.setItem('spotify-api-key', spotifyKey);
+    localStorage.setItem('spotify-client-id', spotifyClientId);
+    localStorage.setItem('spotify-client-secret', spotifyClientSecret);
     
     toast.success('API keys saved successfully');
   };
@@ -28,7 +30,7 @@ const Settings = () => {
     <div className="flex flex-col min-h-screen">
       <Header />
       
-      <main className="flex-grow py-12 px-6">
+      <main className="flex-grow py-12 px-6 pt-24">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold mb-8">Settings</h1>
           
@@ -65,19 +67,31 @@ const Settings = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="spotify-key">Spotify API Key</Label>
+                <Label htmlFor="spotify-client-id">Spotify Client ID</Label>
                 <Input
-                  id="spotify-key"
+                  id="spotify-client-id"
                   type="password"
-                  placeholder="..."
-                  value={spotifyKey}
-                  onChange={(e) => setSpotifyKey(e.target.value)}
+                  placeholder="Client ID from Spotify Developer Dashboard"
+                  value={spotifyClientId}
+                  onChange={(e) => setSpotifyClientId(e.target.value)}
+                />
+                <p className="text-sm text-gray-500">Required for soundtrack generation</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="spotify-client-secret">Spotify Client Secret</Label>
+                <Input
+                  id="spotify-client-secret"
+                  type="password"
+                  placeholder="Client Secret from Spotify Developer Dashboard"
+                  value={spotifyClientSecret}
+                  onChange={(e) => setSpotifyClientSecret(e.target.value)}
                 />
                 <p className="text-sm text-gray-500">Required for soundtrack generation</p>
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={handleSave} className="bg-gray-900 hover:bg-gray-800 text-white">
+              <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white">
                 Save API Keys
               </Button>
             </CardFooter>

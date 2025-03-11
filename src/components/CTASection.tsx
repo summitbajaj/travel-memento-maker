@@ -14,9 +14,11 @@ const CTASection = () => {
           Start creating your first memory capsule today and transform your travel experiences into lasting digital mementos.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Button className="rounded-full h-12 px-12 text-base bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300">
-            Create Your First Memory
-          </Button>
+          <Link to="/create">
+            <Button className="rounded-full h-12 px-12 text-base bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300">
+              Create Your First Memory
+            </Button>
+          </Link>
           <Link to="/settings">
             <Button variant="outline" className="rounded-full h-12 px-8 text-base border-gray-300 text-gray-700 hover:bg-gray-100">
               Configure API Keys
