@@ -116,8 +116,8 @@ const CreateMemory = () => {
       
       toast.success("Memory created successfully!");
       
-      // Navigate to the memory detail page
-      navigate(`/memory/${newMemory.id}`);
+      // Navigate to the memory detail page with a query parameter to trigger generation
+      navigate(`/memory/${newMemory.id}?autoGenerate=true`);
     } catch (error) {
       toast.error("Failed to create memory. Please try again.");
       console.error(error);

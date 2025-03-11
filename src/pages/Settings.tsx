@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +6,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 const Settings = () => {
   const [openaiKey, setOpenaiKey] = useState('');
@@ -18,7 +17,6 @@ const Settings = () => {
   const [showSpotifyClientSecret, setShowSpotifyClientSecret] = useState(false);
   
   useEffect(() => {
-    // Load saved keys from localStorage
     const savedOpenaiKey = localStorage.getItem('openai-api-key');
     const savedSpotifyClientId = localStorage.getItem('spotify-client-id');
     const savedSpotifyClientSecret = localStorage.getItem('spotify-client-secret');
@@ -29,28 +27,30 @@ const Settings = () => {
   }, []);
   
   const saveSettings = () => {
-    // Validate inputs
     if (!openaiKey) {
-      toast.error('Please enter your OpenAI API key');
+      toast.error('OpenAI API key is required');
       return;
     }
     
     if (!spotifyClientId) {
-      toast.error('Please enter your Spotify Client ID');
+      toast.error('Spotify Client ID is required');
       return;
     }
     
     if (!spotifyClientSecret) {
-      toast.error('Please enter your Spotify Client Secret');
+      toast.error('Spotify Client Secret is required');
       return;
     }
     
-    // Save to localStorage
+    if (!openaiKey.startsWith('sk-')) {
+      toast.warning('OpenAI API key should start with "sk-"');
+    }
+    
     localStorage.setItem('openai-api-key', openaiKey);
     localStorage.setItem('spotify-client-id', spotifyClientId);
     localStorage.setItem('spotify-client-secret', spotifyClientSecret);
     
-    toast.success('API settings saved successfully');
+    toast.success('API settings saved successfully. You can now create and generate memories!');
   };
   
   return (
@@ -65,7 +65,13 @@ const Settings = () => {
             <CardHeader>
               <CardTitle>Configure API Keys</CardTitle>
               <CardDescription>
-                Enter your API keys to enable the memory generation features
+                Enter your API keys to enable the memory generation features.
+                <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start gap-2">
+                  <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-amber-800">
+                    All fields are required. Your API keys are stored locally on your device and are not sent to our servers.
+                  </p>
+                </div>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -99,7 +105,10 @@ const Settings = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="spotify-client-id">Spotify Client ID</Label>
+                <Label htmlFor="spotify-client-id" className="flex items-center gap-1">
+                  Spotify Client ID
+                  <span className="text-red-500">*</span>
+                </Label>
                 <div className="relative">
                   <Input
                     id="spotify-client-id"
@@ -128,7 +137,10 @@ const Settings = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="spotify-client-secret">Spotify Client Secret</Label>
+                <Label htmlFor="spotify-client-secret" className="flex items-center gap-1">
+                  Spotify Client Secret
+                  <span className="text-red-500">*</span>
+                </Label>
                 <div className="relative">
                   <Input
                     id="spotify-client-secret"
@@ -152,7 +164,7 @@ const Settings = () => {
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Found in the same place as your Client ID after creating an app
+                  Found in the same place as your Client ID after creating an app in the Spotify Developer Dashboard
                 </p>
               </div>
             </CardContent>

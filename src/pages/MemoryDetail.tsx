@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useMemories, Memory } from '@/contexts/MemoryContext';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -14,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 const MemoryDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { getMemory, updateMemory } = useMemories();
   const [memory, setMemory] = useState<Memory | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -24,21 +24,24 @@ const MemoryDetail = () => {
       if (foundMemory) {
         setMemory(foundMemory);
         
-        // If the memory exists but generation is not complete, simulate generation
-        if (!foundMemory.generationComplete) {
-          simulateGeneration(foundMemory);
+        const searchParams = new URLSearchParams(location.search);
+        const autoGenerate = searchParams.get('autoGenerate');
+        
+        if (!foundMemory.generationComplete && (autoGenerate === 'true' || isGenerating)) {
+          startGeneration(foundMemory);
         }
       } else {
         toast.error("Memory not found");
         navigate('/');
       }
     }
-  }, [id, getMemory, navigate]);
+  }, [id, getMemory, navigate, location.search]);
   
-  const simulateGeneration = (mem: Memory) => {
+  const startGeneration = (mem: Memory) => {
+    if (isGenerating) return;
+    
     setIsGenerating(true);
     
-    // Check if API keys are configured
     const openaiKey = localStorage.getItem('openai-api-key');
     const spotifyClientId = localStorage.getItem('spotify-client-id');
     const spotifyClientSecret = localStorage.getItem('spotify-client-secret');
@@ -46,12 +49,17 @@ const MemoryDetail = () => {
     if (!openaiKey || !spotifyClientId || !spotifyClientSecret) {
       toast.error("Please configure your API keys in Settings first");
       navigate('/settings');
+      setIsGenerating(false);
       return;
     }
     
-    // Simulate AI generation with timeout
+    toast.info("Generating your memory capsule. This may take a minute...");
+    
+    simulateGeneration(mem);
+  };
+  
+  const simulateGeneration = (mem: Memory) => {
     setTimeout(() => {
-      // Mock generated content
       const generatedMemory = {
         ...mem,
         generationComplete: true,
@@ -100,7 +108,6 @@ const MemoryDetail = () => {
         ]
       };
       
-      // Update the memory with generated content
       updateMemory(mem.id, generatedMemory);
       setMemory(generatedMemory);
       setIsGenerating(false);
@@ -278,7 +285,7 @@ const MemoryDetail = () => {
                   <p className="text-muted-foreground mt-1">Click below to start creating your memory capsule</p>
                 </div>
                 <Button 
-                  onClick={() => simulateGeneration(memory)}
+                  onClick={() => startGeneration(memory)}
                   className="mt-2 bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   Generate Now
