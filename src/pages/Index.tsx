@@ -1,59 +1,43 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import HeroSection from '@/components/HeroSection';
 import FeaturesSection from '@/components/FeaturesSection';
-import HowItWorksSection from '@/components/HowItWorksSection';
 import CTASection from '@/components/CTASection';
-import Footer from '@/components/Footer';
+import HowItWorksSection from '@/components/HowItWorksSection';
+import MemoryGallery from '@/components/MemoryGallery';
+import { MemoryProvider } from '@/contexts/MemoryContext';
 
 const Index = () => {
-  useEffect(() => {
-    const handleScroll = () => {
-      const elements = document.querySelectorAll('.animate-on-scroll');
-      
-      elements.forEach(element => {
-        const elementPosition = element.getBoundingClientRect().top;
-        const windowHeight = window.innerHeight;
-        
-        if (elementPosition < windowHeight * 0.85) {
-          element.classList.add('animate-fade-in');
-          element.classList.remove('opacity-0');
-        }
-      });
-    };
-    
-    window.addEventListener('scroll', handleScroll);
-    // Initial check
-    handleScroll();
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
+  // Check if user has configured API keys
+  const hasKeys = localStorage.getItem('openai-api-key') && 
+                 localStorage.getItem('spotify-client-id') &&
+                 localStorage.getItem('spotify-client-secret');
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Header />
-      
-      <main className="flex-grow">
-        <HeroSection />
+    <MemoryProvider>
+      <div className="flex flex-col min-h-screen">
+        <Header />
         
-        <div className="animate-on-scroll opacity-0">
-          <FeaturesSection />
-        </div>
+        {!hasKeys ? (
+          // Show marketing sections if user hasn't set up API keys
+          <>
+            <HeroSection />
+            <FeaturesSection />
+            <HowItWorksSection />
+            <CTASection />
+          </>
+        ) : (
+          // Show memory gallery if user has set up API keys
+          <main className="flex-grow pt-16">
+            <MemoryGallery />
+          </main>
+        )}
         
-        <div className="animate-on-scroll opacity-0">
-          <HowItWorksSection />
-        </div>
-        
-        <div className="animate-on-scroll opacity-0">
-          <CTASection />
-        </div>
-      </main>
-      
-      <Footer />
-    </div>
+        <Footer />
+      </div>
+    </MemoryProvider>
   );
 };
 

@@ -14,9 +14,11 @@ import { CalendarIcon, ImagePlus, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from '@/lib/utils';
+import { useMemories, Photo } from '@/contexts/MemoryContext';
 
 const CreateMemory = () => {
   const navigate = useNavigate();
+  const { addMemory } = useMemories();
   const [title, setTitle] = useState('');
   const [destination, setDestination] = useState('');
   const [description, setDescription] = useState('');
@@ -25,7 +27,7 @@ const CreateMemory = () => {
   const [uploading, setUploading] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
   const [photosPreviews, setPhotosPreviews] = useState<string[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -78,7 +80,7 @@ const CreateMemory = () => {
     return true;
   };
 
-  const handleGenerateMemories = async () => {
+  const handleCreateMemory = async () => {
     if (!validateForm()) return;
     
     // Check if API keys are configured
@@ -92,20 +94,35 @@ const CreateMemory = () => {
       return;
     }
     
-    setIsGenerating(true);
+    setIsSubmitting(true);
     
-    // Simulate the generation process (in a real app, this would call an API)
     try {
-      // Mock generation process with a timeout
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Convert files to photo objects with URLs
+      const photosData: Photo[] = photosPreviews.map((url, index) => ({
+        id: `photo-${index}`,
+        url
+      }));
       
-      toast.success("Memory capsule created successfully!");
-      navigate('/'); // Navigate to gallery or view page when implemented
+      // Add the memory to context
+      const newMemory = addMemory({
+        title,
+        destination,
+        description,
+        startDate: startDate as Date,
+        endDate: endDate as Date,
+        photos: photosData,
+        generationComplete: false
+      });
+      
+      toast.success("Memory created successfully!");
+      
+      // Navigate to the memory detail page
+      navigate(`/memory/${newMemory.id}`);
     } catch (error) {
-      toast.error("Failed to generate memory. Please try again.");
+      toast.error("Failed to create memory. Please try again.");
       console.error(error);
     } finally {
-      setIsGenerating(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -252,17 +269,17 @@ const CreateMemory = () => {
                 Cancel
               </Button>
               <Button 
-                onClick={handleGenerateMemories}
-                disabled={isGenerating}
+                onClick={handleCreateMemory}
+                disabled={isSubmitting}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {isGenerating ? (
+                {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
+                    Creating...
                   </>
                 ) : (
-                  "Generate Memories"
+                  "Create Memory"
                 )}
               </Button>
             </CardFooter>

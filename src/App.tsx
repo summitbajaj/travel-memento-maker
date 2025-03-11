@@ -8,22 +8,27 @@ import Index from "./pages/Index";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import CreateMemory from "./pages/CreateMemory";
+import MemoryDetail from "./pages/MemoryDetail";
+import { MemoryProvider } from "./contexts/MemoryContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner position="top-center" closeButton />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/create" element={<CreateMemory />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <MemoryProvider>
+        <Toaster />
+        <Sonner position="top-center" closeButton />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/create" element={<CreateMemory />} />
+            <Route path="/memory/:id" element={<MemoryDetail />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </MemoryProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
