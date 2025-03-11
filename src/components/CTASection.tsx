@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 const CTASection = () => {
   return (
@@ -12,9 +13,16 @@ const CTASection = () => {
         <p className="text-lg text-gray-600 mb-10 max-w-2xl mx-auto">
           Start creating your first memory capsule today and transform your travel experiences into lasting digital mementos.
         </p>
-        <Button className="rounded-full h-12 px-12 text-base bg-gray-900 hover:bg-gray-800 transition-all duration-300">
-          Create Your First Memory
-        </Button>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Button className="rounded-full h-12 px-12 text-base bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300">
+            Create Your First Memory
+          </Button>
+          <Link to="/settings">
+            <Button variant="outline" className="rounded-full h-12 px-8 text-base border-gray-300 text-gray-700 hover:bg-gray-100">
+              Configure API Keys
+            </Button>
+          </Link>
+        </div>
       </div>
     </section>
   );

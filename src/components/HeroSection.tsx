@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const HeroSection = () => {
   const imagesRef = useRef<HTMLDivElement>(null);
@@ -33,7 +34,7 @@ const HeroSection = () => {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-blue-50/30 to-white/95 z-0"></div>
+      <div className="absolute inset-0 bg-gradient-to-b from-blue-50/70 to-white z-0"></div>
       
       <div ref={imagesRef} className="absolute inset-0 overflow-hidden">
         {[
@@ -43,7 +44,7 @@ const HeroSection = () => {
         ].map((src, index) => (
           <div 
             key={index}
-            className={`parallax-image absolute rounded-xl shadow-2xl opacity-70 
+            className={`parallax-image absolute rounded-xl shadow-2xl opacity-50 
               ${index === 0 ? 'w-64 top-[15%] right-[10%] rotate-3' : ''}
               ${index === 1 ? 'w-56 bottom-[20%] left-[15%] -rotate-6' : ''}
               ${index === 2 ? 'w-48 top-[30%] left-[10%] rotate-12' : ''}
@@ -61,7 +62,7 @@ const HeroSection = () => {
       </div>
       
       <div className="max-w-4xl mx-auto text-center px-6 z-10">
-        <div className="animate-fade-in">
+        <div className="animate-fade-in bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-sm">
           <span className="inline-block py-1 px-3 mb-6 rounded-full bg-gray-100 text-gray-800 text-sm font-medium">
             Transform your travel memories
           </span>
@@ -72,13 +73,15 @@ const HeroSection = () => {
             Turn your travel experiences into beautiful digital mementos. Upload photos, share stories, and let AI create personalized postcards, soundtracks, and narratives.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button className="rounded-full h-12 px-8 text-base bg-gray-900 hover:bg-gray-800 transition-all duration-300">
+            <Button className="rounded-full h-12 px-8 text-base bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300">
               Create a Memory
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <Button variant="outline" className="rounded-full h-12 px-8 text-base">
-              Explore Gallery
-            </Button>
+            <Link to="/settings">
+              <Button variant="outline" className="rounded-full h-12 px-8 text-base border-gray-300 text-gray-700 hover:bg-gray-100">
+                Configure API Keys
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
