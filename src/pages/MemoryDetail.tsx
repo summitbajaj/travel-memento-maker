@@ -17,16 +17,16 @@ const MemoryDetail = () => {
   const { getMemory, updateMemory } = useMemories();
   const [memory, setMemory] = useState<Memory | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);
-  
+
   useEffect(() => {
     if (id) {
       const foundMemory = getMemory(id);
       if (foundMemory) {
         setMemory(foundMemory);
-        
+
         const searchParams = new URLSearchParams(location.search);
         const autoGenerate = searchParams.get('autoGenerate');
-        
+
         if (!foundMemory.generationComplete && (autoGenerate === 'true' || isGenerating)) {
           startGeneration(foundMemory);
         }
@@ -36,71 +36,38 @@ const MemoryDetail = () => {
       }
     }
   }, [id, getMemory, navigate, location.search]);
-  
+
   const generateMemoryContent = async (mem: Memory) => {
     try {
       const openaiKey = localStorage.getItem('openai-api-key');
-      
-      // Generate narrative and highlights using OpenAI
-      const narrativeResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a creative travel writer who creates personalized narratives and highlights based on travel experiences.'
-            },
-            {
-              role: 'user',
-              content: `Create a travel narrative about a trip to ${mem.destination} for the dates ${format(new Date(mem.startDate), 'MMM d, yyyy')} to ${format(new Date(mem.endDate), 'MMM d, yyyy')}. Description: ${mem.description || 'No additional details provided.'}`
-            }
-          ],
-          max_tokens: 1000
-        })
-      });
-      
-      const narrativeData = await narrativeResponse.json();
-      const narrative = narrativeData.choices[0].message.content;
-      
-      // Generate highlights
-      const highlightsResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: 'Create a list of 5 highlights or memorable moments for this trip.'
-            },
-            {
-              role: 'user',
-              content: `Trip to ${mem.destination} for the dates ${format(new Date(mem.startDate), 'MMM d, yyyy')} to ${format(new Date(mem.endDate), 'MMM d, yyyy')}. Description: ${mem.description || 'No additional details provided.'}`
-            }
-          ],
-          max_tokens: 300
-        })
-      });
-      
-      const highlightsData = await highlightsResponse.json();
-      const highlightsText = highlightsData.choices[0].message.content;
-      // Parse bullet points or numbered lists into an array
-      const highlights = highlightsText
-        .split(/\n/)
-        .filter(line => line.trim().match(/^(\d+\.|\*|\-)\s+/))
-        .map(line => line.replace(/^(\d+\.|\*|\-)\s+/, '').trim());
-      
-      // Generate postcards (captions for existing photos)
+
+      // Generate postcards with image descriptions using GPT-4o Vision
       const postcards = [];
       for (let i = 0; i < Math.min(mem.photos.length, 3); i++) {
+        const photoUrl = mem.photos[i].url;
+        let imageContent;
+        if (photoUrl.startsWith('data:image')) {
+          imageContent = photoUrl;
+        } else {
+          try {
+            const response = await fetch(photoUrl);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            imageContent = await new Promise((resolve) => {
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            });
+          } catch (error) {
+            console.error('Error fetching image:', error);
+            postcards.push({
+              id: `postcard-${i + 1}`,
+              imageUrl: photoUrl,
+              caption: `Beautiful moments in ${mem.destination}`
+            });
+            continue;
+          }
+        }
+
         const captionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -108,33 +75,144 @@ const MemoryDetail = () => {
             'Authorization': `Bearer ${openaiKey}`
           },
           body: JSON.stringify({
-            model: 'gpt-3.5-turbo',
+            model: 'gpt-4o',
             messages: [
               {
                 role: 'system',
-                content: 'Create a short, evocative caption for a travel photo postcard.'
+                content: 'You are a poetic travel writer who creates beautiful, evocative captions for travel photos. Keep captions concise (1-2 sentences) but deeply atmospheric.'
               },
               {
                 role: 'user',
-                content: `Create a beautiful, poetic caption for a travel photo from ${mem.destination}.`
+                content: [
+                  {
+                    type: 'text',
+                    text: `Create a beautiful, poetic caption for this travel photo from ${mem.destination}. Focus on the mood, atmosphere, and essence captured in the image.`
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: imageContent
+                    }
+                  }
+                ]
               }
             ],
-            max_tokens: 50
+            max_tokens: 100
           })
         });
-        
+
         const captionData = await captionResponse.json();
         postcards.push({
-          id: `postcard-${i+1}`,
-          imageUrl: mem.photos[i].url,
+          id: `postcard-${i + 1}`,
+          imageUrl: photoUrl,
           caption: captionData.choices[0].message.content.replace(/"/g, '')
         });
       }
-      
-      // Generate soundtrack using Spotify
+
+      // Collect all photo image data for narrative generation
+      const photoContents = [];
+      for (let i = 0; i < Math.min(mem.photos.length, 5); i++) {
+        const photoUrl = mem.photos[i].url;
+        if (photoUrl.startsWith('data:image')) {
+          photoContents.push({
+            type: 'image_url',
+            image_url: {
+              url: photoUrl
+            }
+          });
+        } else {
+          try {
+            const response = await fetch(photoUrl);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            const imageContent = await new Promise((resolve) => {
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            });
+            photoContents.push({
+              type: 'image_url',
+              image_url: {
+                url: imageContent as string
+              }
+            });
+          } catch (error) {
+            console.error('Error fetching image:', error);
+            continue;
+          }
+        }
+      }
+
+      // Generate narrative using GPT-4o based on actual photo content
+      const messageContent = [
+        {
+          type: 'text',
+          text: `Create an evocative, creative travel narrative about a trip to ${mem.destination} for the dates ${format(new Date(mem.startDate), 'MMM d, yyyy')} to ${format(new Date(mem.endDate), 'MMM d, yyyy')}. 
+Description: ${mem.description || 'No additional details provided.'}
+
+Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captures the essence of the destination and the emotional journey of the travelers. Focus on sensory details, meaningful moments, and the spirit of the place. Make it evocative and literary in style, with rich imagery. Title the piece creatively.`
+        },
+        ...photoContents
+      ];
+
+      const narrativeResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a masterful travel writer who creates evocative, literary narratives about travel experiences. Your writing is rich with sensory details, emotional resonance, and a strong sense of place.'
+            },
+            {
+              role: 'user',
+              content: messageContent
+            }
+          ],
+          max_tokens: 1200
+        })
+      });
+
+      const narrativeData = await narrativeResponse.json();
+      const narrative = narrativeData.choices[0].message.content;
+
+      // Generate highlights based on photos and description
+      const highlightsResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            {
+              role: 'system',
+              content: 'Create a list of 5 vivid, specific highlights or memorable moments that would define this trip based on the photos and description.'
+            },
+            {
+              role: 'user',
+              content: messageContent
+            }
+          ],
+          max_tokens: 500
+        })
+      });
+
+      const highlightsData = await highlightsResponse.json();
+      const highlightsText = highlightsData.choices[0].message.content;
+      const highlights = highlightsText
+        .split(/\n/)
+        .filter(line => line.trim().match(/^(\d+\.|\*|\-)\s+/))
+        .map(line => line.replace(/^(\d+\.|\*|\-)\s+/, '').trim());
+
+      // Generate soundtrack using Spotify (same as before)
       const spotifyClientId = localStorage.getItem('spotify-client-id');
       const spotifyClientSecret = localStorage.getItem('spotify-client-secret');
-      
+
       // Get Spotify access token
       const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
@@ -144,10 +222,9 @@ const MemoryDetail = () => {
         },
         body: 'grant_type=client_credentials'
       });
-      
       const tokenData = await tokenResponse.json();
       const accessToken = tokenData.access_token;
-      
+
       // Generate mood keywords for the trip using OpenAI
       const moodResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -156,46 +233,53 @@ const MemoryDetail = () => {
           'Authorization': `Bearer ${openaiKey}`
         },
         body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
+          model: 'gpt-4o',
           messages: [
             {
               role: 'system',
-              content: 'Generate 3 mood/genre keywords for a travel soundtrack.'
+              content: 'Generate 3 specific music genres or moods for a travel soundtrack that perfectly captures the vibe in these photos.'
             },
             {
               role: 'user',
-              content: `Generate 3 music genres or moods that would match a trip to ${mem.destination} for the dates ${format(new Date(mem.startDate), 'MMM d, yyyy')} to ${format(new Date(mem.endDate), 'MMM d, yyyy')}. Description: ${mem.description || 'No additional details provided.'}`
+              content: messageContent
             }
           ],
           max_tokens: 100
         })
       });
-      
       const moodData = await moodResponse.json();
-      const moods = moodData.choices[0].message.content.split(/,|\n/).map(mood => mood.trim().replace(/^\d+\.\s*/, ''));
-      
+      let moods = moodData.choices[0].message.content
+        .split(/,|\n/)
+        .map(mood => mood.trim())
+        .filter(mood => mood !== '');
+      if (moods.length === 0) {
+        moods = ['chill'];
+      }
+
       // Search for tracks based on moods
       let tracks = [];
       for (const mood of moods) {
+        if (!mood) continue;
         const searchResponse = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(mood)}&type=track&limit=4`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`
           }
         });
-        
         const searchData = await searchResponse.json();
-        tracks = [...tracks, ...searchData.tracks.items.map(item => ({
-          name: item.name,
-          artist: item.artists[0].name,
-          url: item.external_urls.spotify
-        }))];
+        if (searchData.tracks && searchData.tracks.items) {
+          tracks = [
+            ...tracks,
+            ...searchData.tracks.items.map(item => ({
+              name: item.name,
+              artist: item.artists[0].name,
+              url: item.external_urls.spotify
+            }))
+          ];
+        }
       }
-      
       // Filter to get a diverse set of 10 tracks maximum
-      tracks = tracks.filter((track, index, self) => 
-        index === self.findIndex(t => t.name === track.name)
-      ).slice(0, 10);
-      
+      tracks = tracks.filter((track, index, self) => index === self.findIndex(t => t.name === track.name)).slice(0, 10);
+
       const generatedMemory = {
         ...mem,
         generationComplete: true,
@@ -207,40 +291,35 @@ const MemoryDetail = () => {
         narrative,
         highlights
       };
-      
+
       updateMemory(mem.id, generatedMemory);
       setMemory(generatedMemory);
       setIsGenerating(false);
       toast.success("Memory generation complete!");
-      
+
     } catch (error) {
       console.error('Error generating memory content:', error);
       toast.error("Error generating memory content. Please check your API keys and try again.");
       setIsGenerating(false);
     }
   };
-  
+
   const startGeneration = (mem: Memory) => {
     if (isGenerating) return;
-    
     setIsGenerating(true);
-    
     const openaiKey = localStorage.getItem('openai-api-key');
     const spotifyClientId = localStorage.getItem('spotify-client-id');
     const spotifyClientSecret = localStorage.getItem('spotify-client-secret');
-    
     if (!openaiKey || !spotifyClientId || !spotifyClientSecret) {
       toast.error("Please configure your API keys in Settings first");
       navigate('/settings');
       setIsGenerating(false);
       return;
     }
-    
     toast.info("Generating your memory capsule. This may take a minute...");
-    
     generateMemoryContent(mem);
   };
-  
+
   if (!memory) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -252,11 +331,11 @@ const MemoryDetail = () => {
       </div>
     );
   }
-  
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      
+
       <main className="flex-grow py-12 px-6 pt-24">
         <div className="max-w-5xl mx-auto">
           <Button 
@@ -267,7 +346,7 @@ const MemoryDetail = () => {
             <ArrowLeft size={16} />
             Back to Memories
           </Button>
-          
+
           <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold">{memory.title}</h1>
@@ -288,7 +367,7 @@ const MemoryDetail = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex gap-2">
               <Button variant="outline" className="flex items-center gap-2">
                 <Share size={16} />
@@ -300,7 +379,7 @@ const MemoryDetail = () => {
               </Button>
             </div>
           </div>
-          
+
           {isGenerating ? (
             <Card className="w-full p-8 text-center">
               <div className="flex flex-col items-center justify-center gap-4">
@@ -319,7 +398,7 @@ const MemoryDetail = () => {
                 <TabsTrigger value="narrative">Narrative</TabsTrigger>
                 <TabsTrigger value="highlights">Highlights</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="postcards" className="mt-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {memory.postcards?.map((postcard) => (
@@ -338,7 +417,7 @@ const MemoryDetail = () => {
                   ))}
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="soundtrack" className="mt-0">
                 <Card>
                   <CardHeader>
@@ -369,7 +448,7 @@ const MemoryDetail = () => {
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="narrative" className="mt-0">
                 <Card>
                   <CardHeader>
@@ -387,7 +466,7 @@ const MemoryDetail = () => {
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="highlights" className="mt-0">
                 <Card>
                   <CardHeader>
@@ -429,7 +508,7 @@ const MemoryDetail = () => {
               </div>
             </Card>
           )}
-          
+
           <div className="mt-12">
             <h2 className="text-xl font-semibold mb-4">Your Photos</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -446,7 +525,7 @@ const MemoryDetail = () => {
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );
