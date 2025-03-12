@@ -44,7 +44,7 @@ const HeroSection = () => {
         ].map((src, index) => (
           <div 
             key={index}
-            className={`parallax-image absolute rounded-xl shadow-2xl opacity-30 
+            className={`parallax-image absolute rounded-xl shadow-2xl opacity-70 
               ${index === 0 ? 'w-64 top-[15%] right-[10%] rotate-3' : ''}
               ${index === 1 ? 'w-56 bottom-[20%] left-[15%] -rotate-6' : ''}
               ${index === 2 ? 'w-48 top-[30%] left-[10%] rotate-12' : ''}
@@ -62,7 +62,7 @@ const HeroSection = () => {
       </div>
       
       <div className="max-w-4xl mx-auto text-center px-6 z-10">
-        <div className="animate-fade-in bg-white/90 backdrop-blur-sm p-8 rounded-xl shadow-sm">
+        <div className="animate-fade-in bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-sm">
           <span className="inline-block py-1 px-3 mb-6 rounded-full bg-gray-100 text-gray-800 text-sm font-medium">
             Transform your travel memories
           </span>

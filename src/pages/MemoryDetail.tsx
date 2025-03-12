@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useMemories, Memory } from '@/contexts/MemoryContext';
@@ -7,8 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import PostcardDesign from '@/components/PostcardDesign';
 import { Loader2, Calendar, MapPin, Clock, Share, Download, ArrowLeft } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import html2canvas from 'html2canvas';
 
 const MemoryDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +20,7 @@ const MemoryDetail = () => {
   const { getMemory, updateMemory } = useMemories();
   const [memory, setMemory] = useState<Memory | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<string>('postcards');
 
   useEffect(() => {
     if (id) {
@@ -320,6 +324,68 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
     generateMemoryContent(mem);
   };
 
+  const handleDownloadAll = async () => {
+    if (!memory) return;
+    
+    toast.info("Preparing your memory package for download...");
+    
+    try {
+      if (selectedTab === 'postcards' && memory.postcards && memory.postcards.length > 0) {
+        // Create a zip file with all the postcards
+        const JSZip = await import('jszip').then(module => module.default);
+        const zip = new JSZip();
+        const postcardFolder = zip.folder("postcards");
+        
+        // Add each postcard to the zip
+        const postcardElements = document.querySelectorAll('[data-postcard-container]');
+        for (let i = 0; i < postcardElements.length; i++) {
+          const canvas = await html2canvas(postcardElements[i] as HTMLElement, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: null
+          });
+          
+          const imageData = canvas.toDataURL('image/png').split(',')[1];
+          postcardFolder?.file(`postcard-${i+1}.png`, imageData, {base64: true});
+        }
+        
+        // Generate the zip file
+        const content = await zip.generateAsync({type: 'blob'});
+        
+        // Create download link
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(content);
+        link.download = `${memory.title.toLowerCase().replace(/\s+/g, '-')}-postcards.zip`;
+        link.click();
+        
+        toast.success("Postcards downloaded successfully!");
+      } else if (selectedTab === 'narrative' && memory.narrative) {
+        // Download narrative as text file
+        const blob = new Blob([memory.narrative], {type: 'text/plain'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${memory.title.toLowerCase().replace(/\s+/g, '-')}-narrative.txt`;
+        link.click();
+        
+        toast.success("Narrative downloaded successfully!");
+      } else if (selectedTab === 'highlights' && memory.highlights) {
+        // Download highlights as text file
+        const highlightsText = memory.highlights.join('\n\n');
+        const blob = new Blob([highlightsText], {type: 'text/plain'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${memory.title.toLowerCase().replace(/\s+/g, '-')}-highlights.txt`;
+        link.click();
+        
+        toast.success("Highlights downloaded successfully!");
+      }
+    } catch (error) {
+      console.error('Error downloading memory content:', error);
+      toast.error("Failed to download. Please try again.");
+    }
+  };
+
   if (!memory) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -369,11 +435,18 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                disabled
+              >
                 <Share size={16} />
                 Share
               </Button>
-              <Button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+              <Button 
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={handleDownloadAll}
+              >
                 <Download size={16} />
                 Download
               </Button>
@@ -391,7 +464,11 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
               </div>
             </Card>
           ) : memory.generationComplete ? (
-            <Tabs defaultValue="postcards" className="w-full">
+            <Tabs 
+              defaultValue="postcards" 
+              className="w-full"
+              onValueChange={(value) => setSelectedTab(value)}
+            >
               <TabsList className="grid grid-cols-4 mb-6">
                 <TabsTrigger value="postcards">Postcards</TabsTrigger>
                 <TabsTrigger value="soundtrack">Soundtrack</TabsTrigger>
@@ -400,20 +477,16 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
               </TabsList>
 
               <TabsContent value="postcards" className="mt-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
                   {memory.postcards?.map((postcard) => (
-                    <Card key={postcard.id} className="overflow-hidden">
-                      <div className="aspect-[4/3] overflow-hidden">
-                        <img 
-                          src={postcard.imageUrl} 
-                          alt={postcard.caption} 
-                          className="w-full h-full object-cover transition-transform hover:scale-105"
-                        />
-                      </div>
-                      <CardContent className="p-4">
-                        <p className="text-sm italic text-muted-foreground">{postcard.caption}</p>
-                      </CardContent>
-                    </Card>
+                    <div key={postcard.id} data-postcard-container>
+                      <PostcardDesign 
+                        imageUrl={postcard.imageUrl}
+                        caption={postcard.caption}
+                        destination={memory.destination}
+                        date={memory.startDate ? format(new Date(memory.startDate), 'MMM yyyy') : undefined}
+                      />
+                    </div>
                   ))}
                 </div>
               </TabsContent>
