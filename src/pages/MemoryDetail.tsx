@@ -11,7 +11,43 @@ import Footer from '@/components/Footer';
 import PostcardDesign from '@/components/PostcardDesign';
 import { Loader2, Calendar, MapPin, Clock, Share, Download, ArrowLeft } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas'; 
+import JSZip from 'jszip';
+
+const processNarrative = (text) => {
+  // Replace markdown styling with HTML tags for rendering
+  const htmlText = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+    .replace(/\*(.*?)\*/g, '<em>$1</em>');           // Italic
+  
+  // Split into paragraphs
+  const paragraphs = htmlText.split(/\n+/);
+  
+  // Extract title if present (usually in the first paragraph)
+  let title = null;
+  let contentParagraphs = [...paragraphs];
+  
+  if (paragraphs[0] && paragraphs[0].includes(':')) {
+    title = paragraphs[0];
+    contentParagraphs = paragraphs.slice(1);
+  }
+  
+  // Limit paragraph length to keep it concise (max 5 paragraphs)
+  const limitedParagraphs = contentParagraphs.slice(0, 5);
+  
+  return (
+    <>
+      {title && (
+        <h3 className="text-xl font-semibold mb-4" 
+          dangerouslySetInnerHTML={{ __html: title.replace(/<\/?[^>]+(>|$)/g, "") }} />
+      )}
+      {limitedParagraphs.map((paragraph, idx) => (
+        <p key={idx} className="text-base leading-relaxed mb-4" 
+          dangerouslySetInnerHTML={{ __html: paragraph.trim() }} />
+      ))}
+    </>
+  );
+};
 
 const MemoryDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -241,7 +277,7 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
           messages: [
             {
               role: 'system',
-              content: 'Generate 3 specific music genres or moods for a travel soundtrack that perfectly captures the vibe in these photos.'
+              content: 'Generate 3 specific English music genres or moods for a travel soundtrack that perfectly captures the vibe in these photos. Focus on popular Western music styles only.'
             },
             {
               role: 'user',
@@ -251,29 +287,39 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
           max_tokens: 100
         })
       });
+
       const moodData = await moodResponse.json();
       let moods = moodData.choices[0].message.content
         .split(/,|\n/)
         .map(mood => mood.trim())
         .filter(mood => mood !== '');
       if (moods.length === 0) {
-        moods = ['chill'];
+        moods = ['Tropical', 'Relaxing', 'Upbeat'];
       }
 
-      // Search for tracks based on moods
+      // When searching for tracks, specify US/UK market
       let tracks = [];
       for (const mood of moods) {
         if (!mood) continue;
-        const searchResponse = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(mood)}&type=track&limit=4`, {
+        // Add market parameter for English-speaking regions
+        const searchResponse = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(mood)}&type=track&limit=4&market=US`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`
           }
         });
         const searchData = await searchResponse.json();
         if (searchData.tracks && searchData.tracks.items) {
+          // Filter for songs with English titles and artists
+          const englishTracks = searchData.tracks.items.filter(item => {
+            // Simple heuristic: check if title and artist name use mostly Latin characters
+            const text = `${item.name} ${item.artists[0].name}`;
+            const nonLatinCharCount = (text.match(/[^\u0000-\u007F]/g) || []).length;
+            return (nonLatinCharCount / text.length) < 0.2; // Allow some non-Latin chars (like accents)
+          });
+          
           tracks = [
             ...tracks,
-            ...searchData.tracks.items.map(item => ({
+            ...englishTracks.map(item => ({
               name: item.name,
               artist: item.artists[0].name,
               url: item.external_urls.spotify
@@ -292,6 +338,7 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
           id: Date.now().toString(),
           songs: tracks
         },
+        soundtrackMoods: moods, 
         narrative,
         highlights
       };
@@ -326,58 +373,70 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
 
   const handleDownloadAll = async () => {
     if (!memory) return;
-    
+  
     toast.info("Preparing your memory package for download...");
-    
+  
     try {
+      // Handle postcards tab
       if (selectedTab === 'postcards' && memory.postcards && memory.postcards.length > 0) {
         // Create a zip file with all the postcards
-        const JSZip = await import('jszip').then(module => module.default);
         const zip = new JSZip();
         const postcardFolder = zip.folder("postcards");
-        
-        // Add each postcard to the zip
+  
+        // Grab all the postcard DOM elements
         const postcardElements = document.querySelectorAll('[data-postcard-container]');
+  
         for (let i = 0; i < postcardElements.length; i++) {
-          const canvas = await html2canvas(postcardElements[i] as HTMLElement, {
-            scale: 2,
+          const element = postcardElements[i] as HTMLElement;
+  
+          // Use html2canvas to capture the *entire* rendered design
+          const canvas = await html2canvas(element, {
             useCORS: true,
-            logging: false,
-            backgroundColor: null
+            scale: window.devicePixelRatio,
+            backgroundColor: null, // if you want transparent background
           });
-          
+  
+          // Convert canvas to data URL, then remove `data:image/png;base64,`
           const imageData = canvas.toDataURL('image/png').split(',')[1];
-          postcardFolder?.file(`postcard-${i+1}.png`, imageData, {base64: true});
+  
+          // Add each postcard image to the zip
+          postcardFolder?.file(`postcard-${i + 1}.png`, imageData, { base64: true });
         }
-        
+  
         // Generate the zip file
-        const content = await zip.generateAsync({type: 'blob'});
-        
+        const content = await zip.generateAsync({ type: 'blob' });
+  
         // Create download link
         const link = document.createElement('a');
         link.href = URL.createObjectURL(content);
         link.download = `${memory.title.toLowerCase().replace(/\s+/g, '-')}-postcards.zip`;
         link.click();
-        
+  
         toast.success("Postcards downloaded successfully!");
-      } else if (selectedTab === 'narrative' && memory.narrative) {
+      }
+  
+      // Handle narrative tab
+      else if (selectedTab === 'narrative' && memory.narrative) {
         // Download narrative as text file
-        const blob = new Blob([memory.narrative], {type: 'text/plain'});
+        const blob = new Blob([memory.narrative], { type: 'text/plain' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = `${memory.title.toLowerCase().replace(/\s+/g, '-')}-narrative.txt`;
         link.click();
-        
+  
         toast.success("Narrative downloaded successfully!");
-      } else if (selectedTab === 'highlights' && memory.highlights) {
+      }
+  
+      // Handle highlights tab
+      else if (selectedTab === 'highlights' && memory.highlights) {
         // Download highlights as text file
         const highlightsText = memory.highlights.join('\n\n');
-        const blob = new Blob([highlightsText], {type: 'text/plain'});
+        const blob = new Blob([highlightsText], { type: 'text/plain' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = `${memory.title.toLowerCase().replace(/\s+/g, '-')}-highlights.txt`;
         link.click();
-        
+  
         toast.success("Highlights downloaded successfully!");
       }
     } catch (error) {
@@ -385,7 +444,7 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
       toast.error("Failed to download. Please try again.");
     }
   };
-
+  
   if (!memory) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -500,6 +559,18 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
+                  {memory.soundtrackMoods && memory.soundtrackMoods.length > 0 && (
+                    <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <h4 className="text-sm font-bold text-gray-800 mb-3">Music Vibes</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {memory.soundtrackMoods.map((mood, idx) => (
+                          <span key={idx} className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-medium">
+                            {mood}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}              
                     <ol className="list-decimal pl-6 space-y-3">
                       {memory.soundtrack?.songs.map((song, index) => (
                         <li key={index} className="pl-2">
@@ -531,10 +602,8 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="prose max-w-none">
-                      {memory.narrative?.split('\n\n').map((paragraph, index) => (
-                        <p key={index}>{paragraph}</p>
-                      ))}
+                    <div className="prose max-w-none space-y-4">
+                      {memory.narrative && processNarrative(memory.narrative)}
                     </div>
                   </CardContent>
                 </Card>

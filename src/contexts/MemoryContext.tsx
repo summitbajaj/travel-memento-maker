@@ -13,27 +13,50 @@ export interface Postcard {
   caption: string;
 }
 
+export interface Song {
+  name: string;
+  artist: string;
+  url?: string;
+}
+
 export interface Memory {
   id: string;
   title: string;
   destination: string;
-  description: string;
+  description?: string;
   startDate: Date;
   endDate: Date;
   photos: Photo[];
   createdAt: Date;
+  generationComplete: boolean;
   postcards?: Postcard[];
   soundtrack?: {
     id: string;
-    songs: {
-      name: string;
-      artist: string;
-      url?: string;
-    }[];
+    songs: Song[];
   };
+  soundtrackMoods?: string[];
   narrative?: string;
   highlights?: string[];
+}
+
+export interface Memory {
+  id: string;
+  title: string;
+  destination: string;
+  description?: string;
+  startDate: Date;
+  endDate: Date;
+  photos: Photo[];
+  createdAt: Date;
   generationComplete: boolean;
+  postcards?: Postcard[];
+  soundtrack?: {
+    id: string;
+    songs: Song[];
+  };
+  soundtrackMoods?: string[]; // Add this new property
+  narrative?: string;
+  highlights?: string[];
 }
 
 interface MemoryContextType {
