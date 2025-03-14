@@ -467,19 +467,6 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
   
         toast.success("Narrative downloaded successfully!");
       }
-  
-      // Handle highlights tab
-      else if (selectedTab === 'highlights' && memory.highlights) {
-        // Download highlights as text file
-        const highlightsText = memory.highlights.join('\n\n');
-        const blob = new Blob([highlightsText], { type: 'text/plain' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `${memory.title.toLowerCase().replace(/\s+/g, '-')}-highlights.txt`;
-        link.click();
-  
-        toast.success("Highlights downloaded successfully!");
-      }
     } catch (error) {
       console.error('Error downloading memory content:', error);
       toast.error("Failed to download. Please try again.");
@@ -569,11 +556,10 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
               className="w-full"
               onValueChange={(value) => setSelectedTab(value)}
             >
-              <TabsList className="grid grid-cols-4 mb-6">
+              <TabsList className="grid grid-cols-3 mb-6">
                 <TabsTrigger value="postcards">Postcards</TabsTrigger>
                 <TabsTrigger value="soundtrack">Soundtrack</TabsTrigger>
                 <TabsTrigger value="narrative">Narrative</TabsTrigger>
-                <TabsTrigger value="highlights">Highlights</TabsTrigger>
               </TabsList>
 
               <TabsContent value="postcards" className="mt-0">
@@ -654,31 +640,6 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
                     <div className="prose max-w-none space-y-4">
                       {memory.narrative && processNarrative(memory.narrative)}
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="highlights" className="mt-0">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Trip Highlights</CardTitle>
-                    <CardDescription>
-                      The most memorable moments from your journey
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-4">
-                      {memory.highlights?.map((highlight, index) => (
-                        <li key={index} className="flex items-start gap-4">
-                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                            {index + 1}
-                          </div>
-                          <div className="flex-1">
-                            <p>{highlight}</p>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
                   </CardContent>
                 </Card>
               </TabsContent>

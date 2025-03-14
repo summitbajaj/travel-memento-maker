@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMemories, Memory } from '@/contexts/MemoryContext';
@@ -11,9 +12,11 @@ const MemoryGallery = () => {
 
   if (memories.length === 0) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-semibold mb-4">Your Memory Gallery</h2>
-        <p className="text-muted-foreground mb-8">You haven't created any memories yet.</p>
+      <div className="text-center py-20">
+        <h2 className="text-3xl font-bold mb-4">Welcome to Memory Capsule</h2>
+        <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+          Capture and preserve your travel memories with AI-enhanced photos, stories, and soundtracks.
+        </p>
         <Link to="/create">
           <Button className="bg-blue-600 hover:bg-blue-700 text-white">
             Create Your First Memory
@@ -27,7 +30,7 @@ const MemoryGallery = () => {
     <section className="py-12">
       <div className="max-w-5xl mx-auto px-6">
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-semibold">Your Memory Gallery</h2>
+          <h2 className="text-2xl font-semibold">Your Memory Capsules</h2>
           <Link to="/create">
             <Button className="bg-blue-600 hover:bg-blue-700 text-white">
               Create New Memory

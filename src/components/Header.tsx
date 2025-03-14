@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ChevronDown, Menu, X, Settings, PlusCircle } from 'lucide-react';
+import { Menu, X, Settings, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -41,7 +41,6 @@ const Header = () => {
                     Settings
                   </Button>
                 </Link>
-                <Button variant="ghost" className="justify-start h-12 text-lg">Sign In</Button>
               </nav>
             </SheetContent>
           </Sheet>
@@ -57,7 +56,9 @@ const Header = () => {
                 </Link>
               </li>
               <li>
-                <Button variant="ghost" className="font-medium">My Gallery</Button>
+                <Link to="/">
+                  <Button variant="ghost" className="font-medium">My Gallery</Button>
+                </Link>
               </li>
               <li>
                 <Link to="/settings">
@@ -68,7 +69,6 @@ const Header = () => {
                 </Link>
               </li>
             </ul>
-            <Button variant="outline" className="rounded-full px-6">Sign In</Button>
           </nav>
         )}
       </div>
