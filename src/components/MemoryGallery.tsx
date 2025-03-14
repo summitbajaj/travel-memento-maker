@@ -1,10 +1,9 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMemories, Memory } from '@/contexts/MemoryContext';
 import { format } from 'date-fns';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { MapPin, Calendar } from 'lucide-react';
+import { MapPin, Calendar, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const MemoryGallery = () => {
@@ -47,17 +46,29 @@ const MemoryGallery = () => {
 };
 
 const MemoryCard = ({ memory }: { memory: Memory }) => {
+  const [imageError, setImageError] = useState(false);
+  
   // Get the first photo as cover, or use placeholder
   const coverPhoto = memory.photos[0]?.url || "/placeholder.svg";
   
   return (
     <Card className="overflow-hidden flex flex-col h-full">
-      <div className="aspect-video overflow-hidden">
-        <img 
-          src={coverPhoto} 
-          alt={memory.title} 
-          className="w-full h-full object-cover transition-transform hover:scale-105"
-        />
+      <div className="aspect-video overflow-hidden bg-gray-100">
+        {!imageError ? (
+          <img 
+            src={coverPhoto} 
+            alt={memory.title} 
+            className="w-full h-full object-cover transition-transform hover:scale-105"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-blue-50">
+            <div className="text-center p-4">
+              <Camera className="h-8 w-8 text-blue-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">{memory.title}</p>
+            </div>
+          </div>
+        )}
       </div>
       <CardContent className="flex-grow p-5">
         <h3 className="font-bold text-lg mb-2 line-clamp-1">{memory.title}</h3>

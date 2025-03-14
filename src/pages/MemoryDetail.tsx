@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useMemories, Memory } from '@/contexts/MemoryContext';
 import { format } from 'date-fns';
@@ -57,6 +56,10 @@ const MemoryDetail = () => {
   const [memory, setMemory] = useState<Memory | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedTab, setSelectedTab] = useState<string>('postcards');
+  
+  // Add these refs to track toast display status
+  const generationToastShown = useRef(false);
+  const autoGenerateProcessed = useRef(false);
 
   useEffect(() => {
     if (id) {
@@ -67,15 +70,26 @@ const MemoryDetail = () => {
         const searchParams = new URLSearchParams(location.search);
         const autoGenerate = searchParams.get('autoGenerate');
 
-        if (!foundMemory.generationComplete && (autoGenerate === 'true' || isGenerating)) {
+        // Only start generation if we haven't processed this autoGenerate parameter yet
+        if (!foundMemory.generationComplete && autoGenerate === 'true' && !autoGenerateProcessed.current && !isGenerating) {
+          autoGenerateProcessed.current = true; // Mark as processed
           startGeneration(foundMemory);
+          
+          // Remove the query parameter to prevent future re-runs
+          if (searchParams.has('autoGenerate')) {
+            searchParams.delete('autoGenerate');
+            navigate({
+              pathname: location.pathname,
+              search: searchParams.toString()
+            }, { replace: true });
+          }
         }
       } else {
         toast.error("Memory not found");
         navigate('/');
       }
     }
-  }, [id, getMemory, navigate, location.search]);
+  }, [id]);
 
   const generateMemoryContent = async (mem: Memory) => {
     try {
@@ -361,11 +375,17 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
       setMemory(generatedMemory);
       setIsGenerating(false);
       toast.success("Memory generation complete!");
-
+      
+      // Reset the toast flag after completion
+      generationToastShown.current = false;
+      
     } catch (error) {
       console.error('Error generating memory content:', error);
       toast.error("Error generating memory content. Please check your API keys and try again.");
       setIsGenerating(false);
+      
+      // Reset the toast flag on error too
+      generationToastShown.current = false;
     }
   };
 
@@ -375,13 +395,20 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
     const openaiKey = localStorage.getItem('openai-api-key');
     const spotifyClientId = localStorage.getItem('spotify-client-id');
     const spotifyClientSecret = localStorage.getItem('spotify-client-secret');
+    
     if (!openaiKey || !spotifyClientId || !spotifyClientSecret) {
       toast.error("Please configure your API keys in Settings first");
       navigate('/settings');
       setIsGenerating(false);
       return;
     }
-    toast.info("Generating your memory capsule. This may take a minute...");
+    
+    // Only show toast if it hasn't been shown already
+    if (!generationToastShown.current) {
+      toast.info("Generating your memory capsule. This may take a minute...");
+      generationToastShown.current = true;
+    }
+    
     generateMemoryContent(mem);
   };
 
