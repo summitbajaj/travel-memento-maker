@@ -194,6 +194,19 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
         ...photoContents
       ];
 
+      // Create a revised narrative prompt without the dates
+      const narrativePrompt = `Create a travel narrative for a trip to ${mem.destination}.
+      Begin with a creative title on its own line.
+      Then, write a short poetic stanza (1–3 lines) formatted in *italics* (using Markdown) as the first paragraph.
+      After that, write 2–3 additional paragraphs that describe the trip in a clear, straightforward manner. Capture the key emotions, sensory details, and experiences of the journey without using overly flowery language.`;
+
+
+      // Combine the narrative prompt with photo contents (if any)
+      const narrativeMessageContent = [
+        { type: 'text', text: narrativePrompt },
+        ...photoContents
+      ];
+
       const narrativeResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -209,12 +222,13 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
             },
             {
               role: 'user',
-              content: messageContent
+              content: narrativeMessageContent
             }
           ],
           max_tokens: 1200
         })
       });
+
 
       const narrativeData = await narrativeResponse.json();
       const narrative = narrativeData.choices[0].message.content;
@@ -444,7 +458,7 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
       toast.error("Failed to download. Please try again.");
     }
   };
-  
+
   if (!memory) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -560,14 +574,22 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
                   </CardHeader>
                   <CardContent>
                   {memory.soundtrackMoods && memory.soundtrackMoods.length > 0 && (
-                    <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <h4 className="text-sm font-bold text-gray-800 mb-3">Music Vibes</h4>
+                    <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 shadow-sm">
+                      <h4 className="text-base font-semibold text-blue-800 mb-3">Music Vibes</h4>
                       <div className="flex flex-wrap gap-2">
-                        {memory.soundtrackMoods.map((mood, idx) => (
-                          <span key={idx} className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-medium">
-                            {mood}
-                          </span>
-                        ))}
+                        {memory.soundtrackMoods.map((mood, idx) => {
+                          // remove any markdown asterisks
+                          const cleanedMood = mood.replace(/\*/g, '').trim();
+                          
+                          return (
+                            <span
+                              key={idx}
+                              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-sm font-medium transition-colors"
+                            >
+                              {cleanedMood}
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
                   )}              
