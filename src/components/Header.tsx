@@ -104,26 +104,19 @@ const Header = () => {
                           </p>
                         </Link>
                       </li>
-                    </ul>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
-                <NavigationMenuItem>
-                  <NavigationMenuTrigger>Company</NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <ul className="grid gap-3 p-4 md:w-[400px] lg:w-[500px]">
-                      <li>
-                        <Link to="/about" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-blue-50 focus:bg-blue-50">
-                          <div className="text-sm font-medium leading-none">About Us</div>
-                          <p className="line-clamp-2 text-sm leading-snug text-gray-500">
-                            Learn about our mission and values
-                          </p>
-                        </Link>
-                      </li>
                       <li>
                         <Link to="/faq" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-blue-50 focus:bg-blue-50">
                           <div className="text-sm font-medium leading-none">FAQ</div>
                           <p className="line-clamp-2 text-sm leading-snug text-gray-500">
                             Frequently asked questions about our product
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link to="/about" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-blue-50 focus:bg-blue-50">
+                          <div className="text-sm font-medium leading-none">About Us</div>
+                          <p className="line-clamp-2 text-sm leading-snug text-gray-500">
+                            Learn about our mission and values
                           </p>
                         </Link>
                       </li>

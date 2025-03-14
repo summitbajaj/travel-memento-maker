@@ -2,6 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Github, Twitter, Instagram } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
@@ -29,18 +30,35 @@ const Footer = () => {
           <div>
             <h3 className="font-medium mb-4 text-gray-900">Product</h3>
             <ul className="space-y-3">
-              <li><Button variant="link" className="p-0 h-auto text-gray-600 hover:text-gray-900">Features</Button></li>
-              <li><Button variant="link" className="p-0 h-auto text-gray-600 hover:text-gray-900">Pricing</Button></li>
-              <li><Button variant="link" className="p-0 h-auto text-gray-600 hover:text-gray-900">FAQ</Button></li>
+              <li>
+                <Link to="/features">
+                  <Button variant="link" className="p-0 h-auto text-gray-600 hover:text-gray-900">Features</Button>
+                </Link>
+              </li>
+              <li>
+                <Link to="/pricing">
+                  <Button variant="link" className="p-0 h-auto text-gray-600 hover:text-gray-900">Pricing</Button>
+                </Link>
+              </li>
+              <li>
+                <Link to="/faq">
+                  <Button variant="link" className="p-0 h-auto text-gray-600 hover:text-gray-900">FAQ</Button>
+                </Link>
+              </li>
             </ul>
           </div>
           
           <div>
             <h3 className="font-medium mb-4 text-gray-900">Company</h3>
             <ul className="space-y-3">
-              <li><Button variant="link" className="p-0 h-auto text-gray-600 hover:text-gray-900">About</Button></li>
-              <li><Button variant="link" className="p-0 h-auto text-gray-600 hover:text-gray-900">Blog</Button></li>
-              <li><Button variant="link" className="p-0 h-auto text-gray-600 hover:text-gray-900">Contact</Button></li>
+              <li>
+                <Link to="/about">
+                  <Button variant="link" className="p-0 h-auto text-gray-600 hover:text-gray-900">About</Button>
+                </Link>
+              </li>
+              <li>
+                <Button variant="link" className="p-0 h-auto text-gray-600 hover:text-gray-900">Contact</Button>
+              </li>
             </ul>
           </div>
         </div>

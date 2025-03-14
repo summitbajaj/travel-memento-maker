@@ -6,65 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 
-const TeamMember = ({ 
-  name, 
-  role, 
-  image, 
-  bio 
-}: { 
-  name: string; 
-  role: string; 
-  image: string; 
-  bio: string; 
-}) => {
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="text-center">
-          <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4">
-            <img 
-              src={image} 
-              alt={name}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <h3 className="text-xl font-bold mb-1 text-gray-900">{name}</h3>
-          <p className="text-blue-600 mb-3">{role}</p>
-          <p className="text-gray-600 text-sm">{bio}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
 const About = () => {
-  const team = [
-    {
-      name: "Alex Chen",
-      role: "Founder & CEO",
-      image: "https://randomuser.me/api/portraits/men/32.jpg",
-      bio: "Alex founded Memory Capsule after losing precious travel photos in a hard drive crash. He's passionate about helping people preserve their memories."
-    },
-    {
-      name: "Sarah Johnson",
-      role: "Chief Technology Officer",
-      image: "https://randomuser.me/api/portraits/women/44.jpg",
-      bio: "With 15+ years in AI and machine learning, Sarah leads our technology development and ensures our platform delivers magical experiences."
-    },
-    {
-      name: "Miguel Rodriguez",
-      role: "Head of Design",
-      image: "https://randomuser.me/api/portraits/men/67.jpg",
-      bio: "Miguel brings his background in digital art and UI/UX to create beautiful, intuitive designs that showcase your memories."
-    },
-    {
-      name: "Priya Patel",
-      role: "Product Manager",
-      image: "https://randomuser.me/api/portraits/women/63.jpg",
-      bio: "As an avid traveler herself, Priya ensures our product meets the real needs of travelers and memory keepers."
-    }
-  ];
-
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -126,21 +68,6 @@ const About = () => {
                   </p>
                 </CardContent>
               </Card>
-            </div>
-          </div>
-
-          <div className="mb-20">
-            <h2 className="text-3xl font-bold mb-8 text-center text-gray-900">Meet Our Team</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {team.map((member, index) => (
-                <TeamMember 
-                  key={index}
-                  name={member.name}
-                  role={member.role}
-                  image={member.image}
-                  bio={member.bio}
-                />
-              ))}
             </div>
           </div>
 
