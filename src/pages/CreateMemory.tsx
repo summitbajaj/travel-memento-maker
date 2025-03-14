@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -15,6 +14,7 @@ import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from '@/lib/utils';
 import { useMemories, Photo } from '@/contexts/MemoryContext';
+import { getOpenAIApiKey, getSpotifyClientId, getSpotifyClientSecret } from '@/utils/env';
 
 const CreateMemory = () => {
   const navigate = useNavigate();
@@ -83,14 +83,13 @@ const CreateMemory = () => {
   const handleCreateMemory = async () => {
     if (!validateForm()) return;
     
-    // Check if API keys are configured
-    const openaiKey = localStorage.getItem('openai-api-key');
-    const spotifyClientId = localStorage.getItem('spotify-client-id');
-    const spotifyClientSecret = localStorage.getItem('spotify-client-secret');
+    // Check if API keys are configured in environment variables
+    const openaiKey = getOpenAIApiKey();
+    const spotifyClientId = getSpotifyClientId();
+    const spotifyClientSecret = getSpotifyClientSecret();
     
     if (!openaiKey || !spotifyClientId || !spotifyClientSecret) {
-      toast.error("Please configure your API keys in Settings first");
-      navigate('/settings');
+      toast.error("API keys are not configured in environment variables.");
       return;
     }
     

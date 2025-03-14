@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
-import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import CreateMemory from "./pages/CreateMemory";
 import MemoryDetail from "./pages/MemoryDetail";
@@ -27,7 +26,6 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/settings" element={<Settings />} />
             <Route path="/create" element={<CreateMemory />} />
             <Route path="/memory/:id" element={<MemoryDetail />} />
             <Route path="/product" element={<Product />} />

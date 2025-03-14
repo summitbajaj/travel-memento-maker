@@ -1,17 +1,10 @@
+
 import React, { useRef, useEffect } from 'react';
-import { Menu, X, Settings, PlusCircle } from 'lucide-react';
+import { Menu, X, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Link } from 'react-router-dom';
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
 
 const Header = () => {
   const isMobile = useIsMobile();
@@ -68,12 +61,6 @@ const Header = () => {
                   <Button variant="ghost" className="justify-start h-12 text-lg w-full">
                     <PlusCircle className="mr-2 h-5 w-5" />
                     Create Memory
-                  </Button>
-                </Link>
-                <Link to="/settings" onClick={() => setIsMenuOpen(false)}>
-                  <Button variant="ghost" className="justify-start h-12 text-lg w-full">
-                    <Settings className="mr-2 h-5 w-5" />
-                    Settings
                   </Button>
                 </Link>
               </nav>
@@ -182,13 +169,6 @@ const Header = () => {
               <Button variant="ghost" className="font-medium">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Create Memory
-              </Button>
-            </Link>
-            
-            <Link to="/settings">
-              <Button variant="ghost" className="font-medium">
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
               </Button>
             </Link>
           </nav>

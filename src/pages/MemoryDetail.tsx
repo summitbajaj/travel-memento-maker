@@ -12,28 +12,25 @@ import { Loader2, Calendar, MapPin, Clock, Share, Download, ArrowLeft } from 'lu
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import html2canvas from 'html2canvas'; 
 import JSZip from 'jszip';
+import { getOpenAIApiKey, getSpotifyClientId, getSpotifyClientSecret } from '@/utils/env';
 
 const processNarrative = (text) => {
-  // Replace markdown styling with HTML tags for rendering
   const htmlText = text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
-    .replace(/\*(.*?)\*/g, '<em>$1</em>');           // Italic
-  
-  // Split into paragraphs
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>');
+
   const paragraphs = htmlText.split(/\n+/);
-  
-  // Extract title if present (usually in the first paragraph)
+
   let title = null;
   let contentParagraphs = [...paragraphs];
-  
+
   if (paragraphs[0] && paragraphs[0].includes(':')) {
     title = paragraphs[0];
     contentParagraphs = paragraphs.slice(1);
   }
-  
-  // Limit paragraph length to keep it concise (max 5 paragraphs)
+
   const limitedParagraphs = contentParagraphs.slice(0, 5);
-  
+
   return (
     <>
       {title && (
@@ -56,8 +53,6 @@ const MemoryDetail = () => {
   const [memory, setMemory] = useState<Memory | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedTab, setSelectedTab] = useState<string>('postcards');
-  
-  // Add these refs to track toast display status
   const generationToastShown = useRef(false);
   const autoGenerateProcessed = useRef(false);
 
@@ -70,12 +65,10 @@ const MemoryDetail = () => {
         const searchParams = new URLSearchParams(location.search);
         const autoGenerate = searchParams.get('autoGenerate');
 
-        // Only start generation if we haven't processed this autoGenerate parameter yet
         if (!foundMemory.generationComplete && autoGenerate === 'true' && !autoGenerateProcessed.current && !isGenerating) {
-          autoGenerateProcessed.current = true; // Mark as processed
+          autoGenerateProcessed.current = true;
           startGeneration(foundMemory);
           
-          // Remove the query parameter to prevent future re-runs
           if (searchParams.has('autoGenerate')) {
             searchParams.delete('autoGenerate');
             navigate({
@@ -93,9 +86,8 @@ const MemoryDetail = () => {
 
   const generateMemoryContent = async (mem: Memory) => {
     try {
-      const openaiKey = localStorage.getItem('openai-api-key');
+      const openaiKey = getOpenAIApiKey();
 
-      // Generate postcards with image descriptions using GPT-4o Vision
       const postcards = [];
       for (let i = 0; i < Math.min(mem.photos.length, 3); i++) {
         const photoUrl = mem.photos[i].url;
@@ -163,7 +155,6 @@ const MemoryDetail = () => {
         });
       }
 
-      // Collect all photo image data for narrative generation
       const photoContents = [];
       for (let i = 0; i < Math.min(mem.photos.length, 5); i++) {
         const photoUrl = mem.photos[i].url;
@@ -196,7 +187,6 @@ const MemoryDetail = () => {
         }
       }
 
-      // Generate narrative using GPT-4o based on actual photo content
       const messageContent = [
         {
           type: 'text',
@@ -208,14 +198,11 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
         ...photoContents
       ];
 
-      // Create a revised narrative prompt without the dates
       const narrativePrompt = `Create a travel narrative for a trip to ${mem.destination}.
       Begin with a creative title on its own line.
       Then, write a short poetic stanza (1–3 lines) formatted in *italics* (using Markdown) as the first paragraph.
       After that, write 2–3 additional paragraphs that describe the trip in a clear, straightforward manner. Capture the key emotions, sensory details, and experiences of the journey without using overly flowery language.`;
 
-
-      // Combine the narrative prompt with photo contents (if any)
       const narrativeMessageContent = [
         { type: 'text', text: narrativePrompt },
         ...photoContents
@@ -243,11 +230,9 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
         })
       });
 
-
       const narrativeData = await narrativeResponse.json();
       const narrative = narrativeData.choices[0].message.content;
 
-      // Generate highlights based on photos and description
       const highlightsResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -277,11 +262,9 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
         .filter(line => line.trim().match(/^(\d+\.|\*|\-)\s+/))
         .map(line => line.replace(/^(\d+\.|\*|\-)\s+/, '').trim());
 
-      // Generate soundtrack using Spotify (same as before)
-      const spotifyClientId = localStorage.getItem('spotify-client-id');
-      const spotifyClientSecret = localStorage.getItem('spotify-client-secret');
+      const spotifyClientId = getSpotifyClientId();
+      const spotifyClientSecret = getSpotifyClientSecret();
 
-      // Get Spotify access token
       const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
         headers: {
@@ -293,7 +276,6 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
       const tokenData = await tokenResponse.json();
       const accessToken = tokenData.access_token;
 
-      // Generate mood keywords for the trip using OpenAI
       const moodResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -325,11 +307,9 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
         moods = ['Tropical', 'Relaxing', 'Upbeat'];
       }
 
-      // When searching for tracks, specify US/UK market
       let tracks = [];
       for (const mood of moods) {
         if (!mood) continue;
-        // Add market parameter for English-speaking regions
         const searchResponse = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(mood)}&type=track&limit=4&market=US`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`
@@ -337,12 +317,10 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
         });
         const searchData = await searchResponse.json();
         if (searchData.tracks && searchData.tracks.items) {
-          // Filter for songs with English titles and artists
           const englishTracks = searchData.tracks.items.filter(item => {
-            // Simple heuristic: check if title and artist name use mostly Latin characters
             const text = `${item.name} ${item.artists[0].name}`;
             const nonLatinCharCount = (text.match(/[^\u0000-\u007F]/g) || []).length;
-            return (nonLatinCharCount / text.length) < 0.2; // Allow some non-Latin chars (like accents)
+            return (nonLatinCharCount / text.length) < 0.2;
           });
           
           tracks = [
@@ -355,7 +333,6 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
           ];
         }
       }
-      // Filter to get a diverse set of 10 tracks maximum
       tracks = tracks.filter((track, index, self) => index === self.findIndex(t => t.name === track.name)).slice(0, 10);
 
       const generatedMemory = {
@@ -376,15 +353,12 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
       setIsGenerating(false);
       toast.success("Memory generation complete!");
       
-      // Reset the toast flag after completion
       generationToastShown.current = false;
-      
     } catch (error) {
       console.error('Error generating memory content:', error);
-      toast.error("Error generating memory content. Please check your API keys and try again.");
+      toast.error("Error generating memory content. Please check your API environment variables and try again.");
       setIsGenerating(false);
       
-      // Reset the toast flag on error too
       generationToastShown.current = false;
     }
   };
@@ -392,18 +366,16 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
   const startGeneration = (mem: Memory) => {
     if (isGenerating) return;
     setIsGenerating(true);
-    const openaiKey = localStorage.getItem('openai-api-key');
-    const spotifyClientId = localStorage.getItem('spotify-client-id');
-    const spotifyClientSecret = localStorage.getItem('spotify-client-secret');
+    const openaiKey = getOpenAIApiKey();
+    const spotifyClientId = getSpotifyClientId();
+    const spotifyClientSecret = getSpotifyClientSecret();
     
     if (!openaiKey || !spotifyClientId || !spotifyClientSecret) {
-      toast.error("Please configure your API keys in Settings first");
-      navigate('/settings');
+      toast.error("API keys are not configured in environment variables.");
       setIsGenerating(false);
       return;
     }
     
-    // Only show toast if it hasn't been shown already
     if (!generationToastShown.current) {
       toast.info("Generating your memory capsule. This may take a minute...");
       generationToastShown.current = true;
@@ -418,53 +390,43 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
     toast.info("Preparing your memory package for download...");
   
     try {
-      // Handle postcards tab
       if (selectedTab === 'postcards' && memory.postcards && memory.postcards.length > 0) {
-        // Create a zip file with all the postcards
         const zip = new JSZip();
         const postcardFolder = zip.folder("postcards");
-  
-        // Grab all the postcard DOM elements
+
         const postcardElements = document.querySelectorAll('[data-postcard-container]');
-  
+
         for (let i = 0; i < postcardElements.length; i++) {
           const element = postcardElements[i] as HTMLElement;
-  
-          // Use html2canvas to capture the *entire* rendered design
+
           const canvas = await html2canvas(element, {
             useCORS: true,
             scale: window.devicePixelRatio,
-            backgroundColor: null, // if you want transparent background
+            backgroundColor: null
           });
-  
-          // Convert canvas to data URL, then remove `data:image/png;base64,`
+
           const imageData = canvas.toDataURL('image/png').split(',')[1];
-  
-          // Add each postcard image to the zip
+
           postcardFolder?.file(`postcard-${i + 1}.png`, imageData, { base64: true });
         }
-  
-        // Generate the zip file
+
         const content = await zip.generateAsync({ type: 'blob' });
-  
-        // Create download link
+
         const link = document.createElement('a');
         link.href = URL.createObjectURL(content);
         link.download = `${memory.title.toLowerCase().replace(/\s+/g, '-')}-postcards.zip`;
         link.click();
-  
+
         toast.success("Postcards downloaded successfully!");
       }
-  
-      // Handle narrative tab
-      else if (selectedTab === 'narrative' && memory.narrative) {
-        // Download narrative as text file
+
+      if (selectedTab === 'narrative' && memory.narrative) {
         const blob = new Blob([memory.narrative], { type: 'text/plain' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = `${memory.title.toLowerCase().replace(/\s+/g, '-')}-narrative.txt`;
         link.click();
-  
+
         toast.success("Narrative downloaded successfully!");
       }
     } catch (error) {
@@ -586,26 +548,24 @@ Instead of a day-by-day breakdown, write a flowing, atmospheric piece that captu
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                  {memory.soundtrackMoods && memory.soundtrackMoods.length > 0 && (
-                    <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 shadow-sm">
-                      <h4 className="text-base font-semibold text-blue-800 mb-3">Music Vibes</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {memory.soundtrackMoods.map((mood, idx) => {
-                          // remove any markdown asterisks
-                          const cleanedMood = mood.replace(/\*/g, '').trim();
-                          
-                          return (
-                            <span
-                              key={idx}
-                              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-sm font-medium transition-colors"
-                            >
-                              {cleanedMood}
-                            </span>
-                          );
-                        })}
+                    {memory.soundtrackMoods && memory.soundtrackMoods.length > 0 && (
+                      <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 shadow-sm">
+                        <h4 className="text-base font-semibold text-blue-800 mb-3">Music Vibes</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {memory.soundtrackMoods.map((mood, idx) => {
+                            const cleanedMood = mood.replace(/\*/g, '').trim();
+                            return (
+                              <span
+                                key={idx}
+                                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-sm font-medium transition-colors"
+                              >
+                                {cleanedMood}
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}              
+                    )}
                     <ol className="list-decimal pl-6 space-y-3">
                       {memory.soundtrack?.songs.map((song, index) => (
                         <li key={index} className="pl-2">
